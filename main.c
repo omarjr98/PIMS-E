@@ -1,43 +1,41 @@
+#include "external_temp_humidity_h.h"
+#include "internal_temp_humidity_h.h"
 #include "acceleration.h"
 #include "calibration.h"
-#include <stdio.h>
 #include <unistd.h>
+#include <stdio.h>
 
-#define FILENAME "/mnt/sdcard/accelerometer.txt"
+void print_binary(FILE *file, unsigned int value, int num_bits) {
+    for (int i = num_bits - 1; i >= 0; i--) {
+        fprintf(file, "%d", (value >> i) & 1);
+    }
+}
 
 int main() {
-    // Initialize accelerometer
-    init_accelerometer();
 
-    // Calibrate accelerometer
-    float x_offset, y_offset, z_offset;
-    calibrate_offsets(&x_offset, &y_offset, &z_offset);
+	//calibrate_offsets(float *x_offset, float *y_offset, float *z_offset);// Add the void keyword to the function declaration
 
-    // Open file for appending
-    FILE *file = fopen(FILENAME, "a");
-    if (file == NULL) {
-        perror("Failed to open file for writing acceleration data.");
-        return 1;
-    }
-
-    // Main loop to continuously read acceleration data
     while (1) {
-        // Read acceleration values from each axis
-        float x_accel = read_acceleration_x() - x_offset;
-        float y_accel = read_acceleration_y() - y_offset;
-        float z_accel = read_acceleration_z() - z_offset;
+        // Read data from the internal and external sensor
+    	init_accelerometer();
+        external_temp_humidity();
+        internal_temp_humidity();
+        sleep(20);
+        // Calibrate the accelerometer
+        float x_offset, y_offset, z_offset;
+       calibrate_offsets(&x_offset, &y_offset, &z_offset); // Add the necessary arguments to the function call
 
-        // Save acceleration data to file
-        fprintf(file, "Acceleration in X-Axis: %.2f g\n", x_accel);
-        fprintf(file, "Acceleration in Y-Axis: %.2f g\n", y_accel);
-        fprintf(file, "Acceleration in Z-Axis: %.2f g\n", z_accel);
+        // Read acceleration data
+        float x_accel = read_acceleration_x();
+        float y_accel = read_acceleration_y();
+        float z_accel = read_acceleration_z();
 
-        // Sleep for some time before the next reading
-        sleep(1);
+        // Do something with the acceleration data...
+
+
     }
-
-    // Close the file
-    fclose(file);
+    return 0;
+}
 
     return 0;
 }
