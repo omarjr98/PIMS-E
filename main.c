@@ -1,41 +1,43 @@
-#include "external_temp_humidity_h.h"
-#include "internal_temp_humidity_h.h"
 #include "acceleration.h"
 #include "calibration.h"
-#include <unistd.h>
 #include <stdio.h>
+#include <unistd.h>
 
-void print_binary(FILE *file, unsigned int value, int num_bits) {
-    for (int i = num_bits - 1; i >= 0; i--) {
-        fprintf(file, "%d", (value >> i) & 1);
-    }
-}
+#define FILENAME "/mnt/sdcard/accelerometer.txt"
 
 int main() {
+    // Initialize accelerometer
+    init_accelerometer();
 
-	//calibrate_offsets(float *x_offset, float *y_offset, float *z_offset);// Add the void keyword to the function declaration
+    // Calibrate accelerometer
+    float x_offset, y_offset, z_offset;
+    calibrate_offsets(&x_offset, &y_offset, &z_offset);
 
-    while (1) {
-        // Read data from the internal and external sensor
-    	init_accelerometer();
-        external_temp_humidity();
-        internal_temp_humidity();
-        sleep(20);
-        // Calibrate the accelerometer
-        float x_offset, y_offset, z_offset;
-       calibrate_offsets(&x_offset, &y_offset, &z_offset); // Add the necessary arguments to the function call
-
-        // Read acceleration data
-        float x_accel = read_acceleration_x();
-        float y_accel = read_acceleration_y();
-        float z_accel = read_acceleration_z();
-
-        // Do something with the acceleration data...
-
-
+    // Open file for appending
+    FILE *file = fopen(FILENAME, "a");
+    if (file == NULL) {
+        perror("Failed to open file for writing acceleration data.");
+        return 1;
     }
-    return 0;
-}
+
+    // Main loop to continuously read acceleration data
+    while (1) {
+        // Read acceleration values from each axis
+        float x_accel = read_acceleration_x() - x_offset;
+        float y_accel = read_acceleration_y() - y_offset;
+        float z_accel = read_acceleration_z() - z_offset;
+
+        // Save acceleration data to file
+        fprintf(file, "Acceleration in X-Axis: %.2f g\n", x_accel);
+        fprintf(file, "Acceleration in Y-Axis: %.2f g\n", y_accel);
+        fprintf(file, "Acceleration in Z-Axis: %.2f g\n", z_accel);
+
+        // Add a delay to control the frequency of the readings
+        usleep(100000);  // Delay for 100 milliseconds
+    }
+
+    // Close the file
+    fclose(file);
 
     return 0;
 }
