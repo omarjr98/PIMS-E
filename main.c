@@ -1,9 +1,9 @@
+#incliude "internal_temp_humidity_h.h"
 #include "external_temp_humidity_h.h"
 #include "acceleration.h"
 #include "calibration.h"
 #include <stdio.h>
 #include <unistd.h>
-
 #define FILENAME "/mnt/sdcard/sensors.txt"
 
 int main() {
@@ -21,6 +21,7 @@ int main() {
     while (1) {
         float temperature, humidity;
         external_temp_humidity(&temperature, &humidity);
+        internal_temp_humidity(&temperature, &humidity);
 
         float x_accel = read_acceleration_x() - x_offset;
         float y_accel = read_acceleration_y() - y_offset;
