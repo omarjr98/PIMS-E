@@ -5,6 +5,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #define FILENAME "/mnt/sdcard/sensors.txt"
+#define SENSOR_PIN "60"
+#define LED_PIN "66"
+#define GPIO_PATH_PREFIX "/sys/class/gpio/gpio"
 
 int main() {
     init_accelerometer();
