@@ -7,10 +7,12 @@
 #define FILENAME "/mnt/sdcard/sensors.txt"
 #define SENSOR_PIN "60"
 #define LED_PIN "66"
-#define GPIO_PATH_PREFIX "/sys/class/gpio/gpio"
+#include "gpio_control.h"
 
 int main() {
     init_accelerometer();
+    export_gpio(SENSOR_PIN);
+    export_gpio(LED_PIN);
 
     float x_offset, y_offset, z_offset;
     calibrate_offsets(&x_offset, &y_offset, &z_offset);
@@ -19,10 +21,7 @@ int main() {
     if (file == NULL) {
         perror("Failed to open file for writing data.");
         return 1;
-    setup_gpio();
-
-    // Variables for reading sensor value
-    char sensor_value;
+ 
     }
 
     while (1) {
@@ -44,17 +43,20 @@ int main() {
         fprintf(file, "Acceleration in Y-Axis: %.2f g\n", y_accel);
         fprintf(file, "Acceleration in Z-Axis: %.2f g\n", z_accel);
        
-        sensor_value = read_value(SENSOR_PIN);
+ char sensor_value = read_value(SENSOR_PIN);
 
-        // Debug print statement
-        printf("Sensor Value: %c\n", sensor_value);
+       if (sensor_value != '1')
+       {
+           int led_fd = open("/sys/class/gpio/gpio66/value", O_WRONLY);
+           if (led_fd != -1)
+           {
+               write(led_fd, "1", 1); // Turn on LED
+               close(led_fd);
+           }
+       }
 
-        // Control the LED based on sensor value
-        if (sensor_value == '0') // Magnet detected
-            set_value(LED_PIN, "0"); // Turn off the LED
-        else
-            set_value(LED_PIN, "1"); // Turn on the LED
-        usleep(100000);  // Delay for 100 milliseconds
+       usleep(1000); // Check every millisecond
+   
     }
    
 
