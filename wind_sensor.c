@@ -104,7 +104,6 @@ void read_wind_speed() {
         // Print wind speed
         printf("Wind Speed (mph): %.2f\n", wind_speed_mph);
 
-        // Delay before next reading
         usleep(200000);
     }
 
