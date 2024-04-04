@@ -86,7 +86,6 @@ int main() {
         // Set the pointer to the conversion register
         point_to_conversion_register();
 
-        // Delay before next reading
         usleep(250000);
 
         // Request the converted byte
