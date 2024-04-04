@@ -19,16 +19,20 @@ int main() {
     }
 
     while (1) {
-        float temperature, humidity;
-        external_temp_humidity(&temperature, &humidity);
-        internal_temp_humidity(&temperature, &humidity);
+        float external_temperature, external_humidity;
+        float internal_temperature, external_humidity;
+        
+        external_temp_humidity(&external_temperature, &external_humidity);
+        internal_temp_humidity(&interanl_temperature, &internal_humidity);
 
         float x_accel = read_acceleration_x() - x_offset;
         float y_accel = read_acceleration_y() - y_offset;
         float z_accel = read_acceleration_z() - z_offset;
 
-        fprintf(file, "Temperature: %.2f°C\n", temperature);
-        fprintf(file, "Humidity: %.2f%%\n", humidity);
+        fprintf(file, "External Temperature: %.2f°C\n", external_temperature);
+        fprintf(file, "Internal Humidity: %.2f%%\n", external_humidity);
+        fprintf(file, "Temperature: %.2f°C\n", internal_temperature);
+        fprintf(file, "Humidity: %.2f%%\n", internal_humidity);
         fprintf(file, "Acceleration in X-Axis: %.2f g\n", x_accel);
         fprintf(file, "Acceleration in Y-Axis: %.2f g\n", y_accel);
         fprintf(file, "Acceleration in Z-Axis: %.2f g\n", z_accel);
