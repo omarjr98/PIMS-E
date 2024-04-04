@@ -72,7 +72,6 @@ int main() {
         // Set the pointer to the conversion register
         point_to_conversion_register();
 
-        // Delay before next reading
         usleep(250000);
 
         // Request the converted byte
@@ -106,7 +105,6 @@ int main() {
         // Print wind speed
         printf("Wind Speed (mph): %.2f\n", wind_speed_mph);
 
-        // Delay before next reading
         usleep(200000);
 
     }
