@@ -11,13 +11,14 @@
 #define I2C_BUS "/dev/i2c-2"
 
 // Address of the SHT31 sensor
-#define SENSOR_ADDR 0x44
+#define SENSOR_ADDR 0x45
 
 // File path for uSD card
 #define FILENAME "/mnt/sdcard/temp_humid.bin"
 
 // Main function
-void internal_temp_humidity() {
+void internal_temp_humidity(float *internal_temperature, float *internal_humidity) {
+
     int internal_temp_humidity_fd; // Local file descriptor
 
     // Calls the I2C BUS to open
@@ -50,8 +51,8 @@ void internal_temp_humidity() {
     }
 
     // Process sensor data and write to file
-    float temperature = -45 + 175.0 * ((buffer[0] << 8 | buffer[1]) / 65535.0); // Convert raw temperature to Celsius
-    float humidity = 100.0 * ((buffer[3] << 8 | buffer[4]) / 65535.0); // Convert humidity to percentage
+    *internal_temperature = -45 + 175.0 * ((buffer[0] << 8 | buffer[1]) / 65535.0); // Convert raw temperature to Celsius
+    *internal_humidity = 100.0 * ((buffer[3] << 8 | buffer[4]) / 65535.0); // Convert humidity to percentage
 
     FILE *file = fopen(FILENAME, "a"); // Open file for appending
     if (file == NULL) {
@@ -61,21 +62,10 @@ void internal_temp_humidity() {
     }
 
     // Print on terminal
-    printf("Internal Temperature: %.2f degC\n", temperature);
-    printf("Internal Humidity: %.2f %%\n", humidity);
+  //  fprintf(file ,"Internal Temperature: %.2f degC\n", temperature);
+   // fprintf(file, "Internal Humidity: %.2f %%\n", humidity);
 
     // Write binary data to the file
-    char binary_data[64]; // Data size
-    int index = 0;
-
-  // Convert temperature and humidity to 32-bit binary with 10 integer bits and 22 fractional bits
-  unsigned int temperature_integer = (unsigned int)temperature;
-  unsigned int temperature_fractional = (unsigned int)((temperature - temperature_integer) * (1 << 22));
-  unsigned int humidity_integer = (unsigned int)humidity;
-  unsigned int humidity_fractional = (unsigned int)((humidity - humidity_integer) * (1 << 22));
-  unsigned int data[] = {temperature_integer, temperature_fractional, humidity_integer, humidity_fractional};
-  fwrite(data, sizeof(unsigned int), sizeof(data) / sizeof(unsigned int), file);
-  fprintf(file, "\n");
 
     fclose(file);
     close(internal_temp_humidity_fd);
