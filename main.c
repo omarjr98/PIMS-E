@@ -4,7 +4,7 @@
 #include "calibration.h"
 #include <stdio.h>
 #include <unistd.h>
-#define FILENAME "/mnt/sdcard/sensors.txt"
+#define FILENAME "/mnt/sdcard/finalsensors.txt"
 #define SENSOR_PIN "60"
 #define LED_PIN "66"
 #include "gpio_control.h"
