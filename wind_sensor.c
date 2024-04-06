@@ -61,7 +61,7 @@ float calculate_wind_speed(float Vout, float Vtemp) {
     return ws_mph;
 }
 
-void read_wind_speed() {
+void read_wind_speed(float *Vtemp, float *wind_speed_mph, float *TEMP) {
     // Initialize I2C BUS
     init_i2c();
 
@@ -78,7 +78,6 @@ void read_wind_speed() {
         uint16_t converted_value_A0 = read_conversion();
 
         float Vout = converted_value_A0 * 0.002; // 2mV LSB
-        printf("VOUT: %.3f V\n", Vout);
 
         // Point and write to Config register for Channel 1
         write_config(CONFIG_A1);
@@ -91,22 +90,16 @@ void read_wind_speed() {
         // Request the converted byte for Channel 1
         uint16_t converted_value_A1 = read_conversion();
 
-        float Vtemp = converted_value_A1 * 0.002; // 2mV LSB
-        printf("VTEMP: %.3f V\n", Vtemp);
-
-        // Print temperature
-        float TEMP = (Vtemp - 0.400) / 0.0195;
-        printf("TEMP: %.2f C\n", TEMP);
+        *Vtemp = converted_value_A1 * 0.002; // 2mV LSB
 
         // Calculate wind speed
-        float wind_speed_mph = calculate_wind_speed(Vout, Vtemp);
+        *wind_speed_mph = calculate_wind_speed(Vout, *Vtemp);
 
-        // Print wind speed
-        printf("Wind Speed (mph): %.2f\n", wind_speed_mph);
+        // Calculate temperature
+        *TEMP = (*Vtemp - 0.400) / 0.0195;
 
-        usleep(200000);
+        // Delay for next reading
+        sleep(1); // Adjust delay as needed
     }
-
-    // Close I2C connection
-    close(adc_fd);
 }
+
