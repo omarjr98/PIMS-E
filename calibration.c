@@ -1,32 +1,42 @@
 #include "calibration.h"
-#include "acceleration.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <unistd.h>
 
-void calibrate_offsets(float *x_offset, float *y_offset, float *z_offset) {
-    printf("Starting calibration...\n");
+#define CALIBRATION_SAMPLES 100
 
-    // Accumulators for calibration samples
-    float x_accumulator = 0;
-    float y_accumulator = 0;
-    float z_accumulator = 0;
 
-    // Collect samples for calibration
+void calibrate(int file, float *xOffset,float *yOffset,float *zOffset) {
     int i;
-    for (i = 0; i < CALIBRATION_SAMPLES; ++i) {
-        x_accumulator += read_acceleration_x();
-        y_accumulator += read_acceleration_y();
-        z_accumulator += read_acceleration_z();
-        usleep(10000);  // Delay between samples (10ms)
+    int xSum = 0, ySum = 0, zSum = 0;
+
+    for (i = 0; i < CALIBRATION_SAMPLES; i++) {
+        // Read 6 bytes of data from register(0x32)
+        // xAccl lsb, xAccl msb, yAccl lsb, yAccl msb, zAccl lsb, zAccl msb
+        char reg = 0x32;
+        if (write(file, &reg, 1) != 1) {
+            printf("Error writing to register.\n");
+            exit(1);
+        }
+
+        char data[6] = {0};
+        if (read(file, data, 6) != 6) {
+            printf("Error reading from register.\n");
+            exit(1);
+        }
+
+        // Sum up the raw data for each axis
+        xSum += ((data[1] & 0x03) * 256 + (data[0] & 0xFF));
+        ySum += ((data[3] & 0x03) * 256 + (data[2] & 0xFF));
+        zSum += ((data[5] & 0x03) * 256 + (data[4] & 0xFF));
+
+        // Delay before the next reading
+        usleep(10000); // 10ms delay
     }
 
     // Calculate average offsets
-    *x_offset = x_accumulator / CALIBRATION_SAMPLES;
-    *y_offset = y_accumulator / CALIBRATION_SAMPLES;
-    *z_offset = z_accumulator / CALIBRATION_SAMPLES;
-
-    printf("Calibration complete.\n");
-    printf("Offset in X-Axis: %.2f\n", *x_offset);
-    printf("Offset in Y-Axis: %.2f\n", *y_offset);
-    printf("Offset in Z-Axis: %.2f\n", *z_offset);
+    *xOffset = xSum / CALIBRATION_SAMPLES;
+    *yOffset = ySum / CALIBRATION_SAMPLES;
+    *zOffset = zSum / CALIBRATION_SAMPLES;
 }
+
