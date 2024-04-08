@@ -8,7 +8,7 @@
 #include <linux/i2c-dev.h>
 #include <math.h>
 
-#define I2C_BUS "/dev/i2c-2"
+#define I2C_BUS "/dev/i2c-1"
 #define ADC_ADDR 0x48
 #define CONFIG_REG 0x01
 #define CONVERSION_REG 0x00
@@ -101,5 +101,12 @@ void read_wind_speed(float *Vtemp, float *wind_speed_mph, float *TEMP) {
         // Delay for next reading
         sleep(1); // Adjust delay as needed
     }
+
+    close(adc_fd);
+
+
 }
+
+
+
 
