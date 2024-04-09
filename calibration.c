@@ -39,4 +39,3 @@ void calibrate(int file, float *xOffset,float *yOffset,float *zOffset) {
     *yOffset = ySum / CALIBRATION_SAMPLES;
     *zOffset = zSum / CALIBRATION_SAMPLES;
 }
-
