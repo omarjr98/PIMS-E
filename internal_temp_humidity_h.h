@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 // Function declaration
-void internal_temp_humidity();
+void internal_temp_humidity(float *internal_temperature, float *internal_humidity);
 void init_i2c();
 
 #endif
