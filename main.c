@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+#include "PIMS_C_UART.h"
 
 
 #define RTC_DEVICE "/dev/rtc1"
@@ -98,6 +99,10 @@ int main() {
         fprintf(outputFile, " %.2fMPH\n", wind_speed_mph);
         fclose(outputFile);
 
+        //PIMS-C UART
+        SensorReport sr1 = {};
+        transmitSensorReport(sr1);
+      
         // Delay for 1 second before next reading
         sleep(1);
 
