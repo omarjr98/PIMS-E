@@ -1,62 +1,72 @@
 #include "acceleration.h"
 #include <stdio.h>
-#include <unistd.h>
-#include <stdint.h>
 #include <stdlib.h>
-#include <fcntl.h>
-#include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
+#include <sys/ioctl.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-#define I2C_BUS "/dev/i2c-1"
-#define ADXL345_ADDR 0x53
-#define ADXL345_DATA_X0 0x32
-#define ADXL345_DATA_Y0 0x34
-#define ADXL345_DATA_Z0 0x36
-
-static int accelerometer = -1; // File descriptor for the accelerometer device
-
-void init_accelerometer() {
-    if ((accelerometer = open(I2C_BUS, O_RDWR)) < 0) {
-        perror("Failed to open accelerometer bus.");
-        exit(1);
-    }
-    if (ioctl(accelerometer, I2C_SLAVE, ADXL345_ADDR) < 0) {
-        perror("Failed to connect to the accelerometer.");
-        exit(1);
-    }
-}
-
-float read_acceleration_x() {
-    int16_t x_accel_raw = read_signed16(ADXL345_DATA_X0);
-    return (float)(x_accel_raw * 3.9 / 1000.0);
-}
-
-float read_acceleration_y() {
-    int16_t y_accel_raw = read_signed16(ADXL345_DATA_Y0);
-    return (float)(y_accel_raw * 3.9 / 1000.0);
-}
-
-float read_acceleration_z() {
-    int16_t z_accel_raw = read_signed16(ADXL345_DATA_Z0);
-    return (float)(z_accel_raw * 3.9 / 1000.0);
-}
-
-int16_t read_signed16(int reg) { // Function definition
-    uint8_t low, high;
-    int16_t value;
-
-    if (write(accelerometer, &reg, 1) != 1) {
-        perror("Failed to select register for accelerometer.");
-        exit(1);
-    }
-    if (read(accelerometer, &low, 1) != 1 || read(accelerometer, &high, 1) != 1) {
-        perror("Failed to read data for accelerometer.");
+void initialize_accelerometer(int *file) {
+    // Open I2C_BUS_2
+    char *bus = "/dev/i2c-2";
+    if ((*file = open(bus, O_RDWR)) < 0) {
+        printf("Failed to open I2C BUS 2 for accelerometer.\n");
         exit(1);
     }
 
-    value = (high << 8) | low;
-    if (value & (1 << 15)) {  // Check sign bit
-        value -= 1 << 16;
+    // Slave ADXL345 address
+    if (ioctl(*file, I2C_SLAVE, 0x53) < 0) {
+        printf("Failed to acquire I2C BUS access and/or talk to accelerometer.\n");
+        exit(1);
     }
-    return value;
+
+    // Select Bandwidth rate register(0x2C)
+    // Normal mode, Output data rate = 100 Hz(0x0A)
+    char config[2] = {0x2C, 0x0A};
+    write(*file, config, 2);
+
+    // Select Power control register(0x2D)
+    // Auto-sleep disable(0x08)
+    config[0] = 0x2D;
+    config[1] = 0x08;
+    write(*file, config, 2);
+
+    // Select Data format register(0x31)
+    // Self test disabled, 4-wire interface, Full resolution, range = +/-2g(0x08)
+    config[0] = 0x31;
+    config[1] = 0x08;
+    write(*file, config, 2);
+    sleep(1);
+}
+
+void read_acceleration(float file, float *xAccl, float *yAccl, float *zAccl) {
+    // Read 6 bytes of data from register(0x32)
+    // xAccl lsb, xAccl msb, yAccl lsb, yAccl msb, zAccl lsb, zAccl msb
+    char reg = 0x32;
+    if (write(file, &reg, 1) != 1) {
+        printf("Error writing to accelerometer registers.\n");
+        exit(1);
+    }
+
+    char data[6] = {0};
+    if (read(file, data, 6) != 6) {
+        printf("Error reading from accelerometer registers.\n");
+        exit(1);
+    }
+
+    // Convert the data to 10-bits
+    *xAccl = ((data[1] & 0x03) * 256 + (data[0] & 0xFF));
+    if (*xAccl > 511) {
+        *xAccl -= 1024;
+    }
+
+    *yAccl = ((data[3] & 0x03) * 256 + (data[2] & 0xFF));
+    if (*yAccl > 511) {
+        *yAccl -= 1024;
+    }
+
+    *zAccl = ((data[5] & 0x03) * 256 + (data[4] & 0xFF));
+    if (*zAccl > 511) {
+        *zAccl -= 1024;
+    }
 }
