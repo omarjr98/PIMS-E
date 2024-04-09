@@ -87,8 +87,8 @@ int main() {
         }
 
         fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d",rtc_tm.tm_year + 1900, rtc_tm.tm_mon + 1, rtc_tm.tm_mday,rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec);
-        fprintf(file, " %.2fC %.2f%", internal_temperature, internal_humidity);
-        fprintf(file, " %.2fC %.2f%", external_temperature, external_humidity);
+        fprintf(file, " %.2fC %.2f%%", internal_temperature, internal_humidity);
+        fprintf(file, " %.2fC %.2f%%", external_temperature, external_humidity);
         fprintf(file, " X:%.2fg Y:%.2f g Z:%.2f g", xAccl, yAccl, zAccl);
         fprintf(file, " %.2fMPH\n",wind_speed_mph );
         fclose(file);
