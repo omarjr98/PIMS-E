@@ -1,6 +1,6 @@
 #include "internal_temp_humidity.h"
 #include "external_temp_humidity.h"
-#include "acceleration.h"
+#include "accelerometer.h"
 #include "calibration.h"
 #include "wind_sensor.h"
 #include "time.h"
@@ -73,9 +73,9 @@ int main() {
 
         // Print sensor data to terminal
         printf("%04d-%02d-%02d %02d:%02d:%02d\n",rtc_tm.tm_year + 1900, rtc_tm.tm_mon + 1, rtc_tm.tm_mday,rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec);
-        printf("Internal Temperature: %.2f C\n, Internal Humidity: %.2f%\n", internal_temperature, internal_humidity);
-        printf("External Temperature: %.2f C\n, Internal Humidity: %.2f%\n", external_temperature, external_humidity);
-        printf("Acceleration X: %.2f g, Y: %.2f g, Z: %.2f g\n", xAccl, yAccl, zAccl);
+        printf("Internal Temperature: %.2f C\nInternal Humidity: %.2f%\n", internal_temperature, internal_humidity);
+        printf("External Temperature: %.2f C\nInternal Humidity: %.2f%\n", external_temperature, external_humidity);
+        printf("Acceleration X: %.2f g Y: %.2f g Z: %.2f g\n", xAccl, yAccl, zAccl);
         printf("Wind Speed: %.2f MPH\n",wind_speed_mph );
 
 
@@ -87,10 +87,10 @@ int main() {
         }
 
         fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d",rtc_tm.tm_year + 1900, rtc_tm.tm_mon + 1, rtc_tm.tm_mday,rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec);
-        fprintf(file, "%.2fC %.2f%", internal_temperature, internal_humidity);
-        fprintf(file, "%.2fC %.2f%", external_temperature, external_humidity);
-        fprintf(file, "X:%.2fg, Y:%.2f g, Z:%.2f g", xAccl, yAccl, zAccl);
-        fprintf(file, "%.2fMPH\n",wind_speed_mph );
+        fprintf(file, " %.2fC %.2f%", internal_temperature, internal_humidity);
+        fprintf(file, " %.2fC %.2f%", external_temperature, external_humidity);
+        fprintf(file, " X:%.2fg Y:%.2f g Z:%.2f g", xAccl, yAccl, zAccl);
+        fprintf(file, " %.2fMPH\n",wind_speed_mph );
         fclose(file);
 
         // Delay for 1 second before next reading
