@@ -11,19 +11,9 @@
 #define UART_DEVICE "/dev/sr1"
 
 // Remove at some point
-// To receive data, connect the P9_26 (UART1_RXD) pin on the BeagleBone Black 
+// To receive data, connect the P9_26 (UART1_RXD) pin on the BeagleBone Black
 // To transmit data, connect the P9_24 (UART1_TXD) pin on the BeagleBone Black
 
-unsigned char mockRXBuffer[SENSOR_REPORT_SIZE];
-int mockRXCounter = 0;
-void MOCK_UART_TX(unsigned char inputByte){
-    printf("%x ", inputByte);
-    mockRXBuffer[mockRXCounter] = inputByte;
-    mockRXCounter++;
-    if (mockRXCounter > SENSOR_REPORT_SIZE){
-        mockRXCounter = 0;
-    }
-}
 
 
 //Read in the bytes until the UART Message is complete
@@ -32,19 +22,19 @@ void MOCK_UART_TX(unsigned char inputByte){
 //Instruction byte will be first, followed by data bytes
 
 //To send a Sensor report, the sensor report struct has to be created
-//on the PIMS E side. Then the method can be called to transmit the 
+//on the PIMS E side. Then the method can be called to transmit the
 //Sensor report in a pre-determeined way:
 void UART_TX_WRAPPER(unsigned char inputByte){
     //Place Platform Specific UART T_X Function for platform here:
-  
+
     //Open UART
     int uart_fd;
     uart_fd = open(UART_DEVICE, O_WRONLY | O_NOCTTY);
     if (uart_fd == -1) {
         perror("Failed to open UART device");
-        return 1;
+
     }
-  
+
     // Configure UART settings
     struct termios options;
     tcgetattr(uart_fd, &options);
@@ -65,19 +55,18 @@ void UART_TX_WRAPPER(unsigned char inputByte){
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
         close(uart_fd);
-        return 1;
+
     }
 
     // Close UART device
     close(uart_fd);
 
-    return 0;
-    }
-  
-    //Code below is for testing
-    MOCK_UART_TX(inputByte);
 
-}
+    }
+
+
+
+
 
 void txFloat(float input)
 {
@@ -97,10 +86,10 @@ void txFloat(float input)
 //Instruction byte will be first, followed by data bytes
 
 //To send a Sensor report, the sensor report struct has to be created
-//on the PIMS E side. Then the method can be called to transmit the 
+//on the PIMS E side. Then the method can be called to transmit the
 //Sensor report in a pre-determeined way:
 void transmitSensorReport(SensorReport sensorReport){
-  
+
     //Transmit the Report Transfer Byte
     UART_TX_WRAPPER(SINGLE_REPORT_TRANSFER);
 
@@ -129,4 +118,5 @@ void transmitSensorReport(SensorReport sensorReport){
 
 
 }
+
 
