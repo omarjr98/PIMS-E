@@ -1,9 +1,9 @@
 #include "wind_sensor.h"
-#include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdint.h>
 #include <fcntl.h>
+#include <unistd.h>
 #include <sys/ioctl.h>
 #include <linux/i2c-dev.h>
 #include <math.h>
@@ -27,7 +27,6 @@ void init_i2c() {
         exit(1);
     }
 }
-
 void write_config(uint16_t config_value) {
     uint8_t config_buf[3] = {CONFIG_REG, config_value >> 8, config_value & 0xFF};
     if (write(adc_fd, config_buf, sizeof(config_buf)) != sizeof(config_buf)) {
@@ -53,56 +52,38 @@ int16_t read_conversion() {
     return (int16_t)((conversion_buf[0] << 4) | (conversion_buf[1] >> 4));
 }
 
-float calculate_wind_speed(float Vout, float Vtemp) {
-    // Temperature sensor formula
-    float TEMP = (Vtemp - 0.400) / 0.0195;
-    // Wind speed formula
-    float ws_mph = pow((((Vout - 1.253) / (3.038517 * pow(TEMP, 0.115157))) / 0.087288), 3.009364);
-    return ws_mph;
-}
-
 void read_wind_speed(float *Vtemp, float *wind_speed_mph, float *TEMP) {
-    // Initialize I2C BUS
-    init_i2c();
+    // Point and write to Config register
 
-    while (1) {
-        // Point and write to Config register for Channel 0
-        write_config(CONFIG_A0);
+	init_i2c();
 
-        // Set the pointer to the conversion register
-        point_to_conversion_register();
+	write_config(CONFIG_A0);
 
-        usleep(250000);
+    // Set the pointer to the conversion register
+    point_to_conversion_register();
 
-        // Request the converted byte for Channel 0
-        uint16_t converted_value_A0 = read_conversion();
+    usleep(250000);
 
-        float Vout = converted_value_A0 * 0.002; // 2mV LSB
+    // Request the converted byte
+    uint16_t converted_value_A0 = read_conversion();
 
-        // Point and write to Config register for Channel 1
-        write_config(CONFIG_A1);
+    *Vtemp = converted_value_A0 * 0.002; // 2mV LSB
 
-        // Set the pointer to the conversion register
-        point_to_conversion_register();
+    // Point and write to Config register
+    write_config(CONFIG_A1);
 
-        usleep(250000);
+    // Set the pointer to the conversion register
+    point_to_conversion_register();
 
-        // Request the converted byte for Channel 1
-        uint16_t converted_value_A1 = read_conversion();
+    // Delay before next reading
+    usleep(250000);
 
-        *Vtemp = converted_value_A1 * 0.002; // 2mV LSB
+    // Request the converted byte
+    uint16_t converted_value_A1 = read_conversion();
 
-        // Calculate wind speed
-        *wind_speed_mph = calculate_wind_speed(Vout, *Vtemp);
-
-        // Calculate temperature
-        *TEMP = (*Vtemp - 0.400) / 0.0195;
-
-        // Delay for next reading
-        sleep(1); // Adjust delay as needed
-    }
-
-    close(adc_fd);
+    *TEMP = (converted_value_A1 * 0.002 - 0.400) / 0.0195; // 2mV LSB
+    // Calculate wind speed
+    *wind_speed_mph = pow((((*Vtemp - 1.253) / (3.038517 * pow(*TEMP, 0.115157))) / 0.087288), 3.009364);
 
 
 }
