@@ -1,8 +1,7 @@
 #ifndef CALIBRATION_H
 #define CALIBRATION_H
 
-#define CALIBRATION_SAMPLES 100
 
-void calibrate_offsets(float *x_offset, float *y_offset, float *z_offset);
+void calibrate(int file, float *xOffset,float *yOffset, float *zOffset);
 
-#endif // CALIBRATION_H
+#endif
