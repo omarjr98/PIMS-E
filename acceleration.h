@@ -5,4 +5,3 @@ void initialize_accelerometer(int *file);
 void read_acceleration(float file, float *xAccl, float *yAccl, float *zAccl);
 
 #endif /* ACCELEROMETER_H */
-
