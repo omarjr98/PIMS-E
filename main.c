@@ -1,65 +1,102 @@
-#incliude "internal_temp_humidity_h.h"
-#include "external_temp_humidity_h.h"
+#include "internal_temp_humidity.h"
+#include "external_temp_humidity.h"
 #include "acceleration.h"
 #include "calibration.h"
+#include "wind_sensor.h"
+#include "time.h"
 #include <stdio.h>
 #include <unistd.h>
-#define FILENAME "/mnt/sdcard/sensors.txt"
-#define SENSOR_PIN "60"
-#define LED_PIN "66"
-#include "gpio_control.h"
+#include <linux/rtc.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+
+
+#define RTC_DEVICE "/dev/rtc1"
+#define FILENAME "/mnt/sdcard/testing.txt"
+
 
 int main() {
-    init_accelerometer();
-    export_gpio(SENSOR_PIN);
-    export_gpio(LED_PIN);
 
-    float x_offset, y_offset, z_offset;
-    calibrate_offsets(&x_offset, &y_offset, &z_offset);
+	int file, rtc_fd;
+    struct rtc_time rtc_tm;
 
-    FILE *file = fopen(FILENAME, "a");
-    if (file == NULL) {
-        perror("Failed to open file for writing data.");
-        return 1;
- 
-    }
+    // Accelerometer calibration
+    initialize_accelerometer(&file);
+
+    float xOffset, yOffset, zOffset;
+    float external_temperature, external_humidity;
+    float internal_temperature, internal_humidity;
+    float xAccl, yAccl, zAccl;
+    float Vtemp, wind_speed_mph, TEMP;
+
+    calibrate(file, &xOffset, &yOffset, &zOffset);
+
+    printf("X-Offset %.2f , Y-Offseet %.2f , Z-Offset %.2f\n", xOffset, yOffset,zOffset);
+
 
     while (1) {
-        float external_temperature, external_humidity;
-        float internal_temperature, external_humidity;
-        
+
+        // Open RTC
+        rtc_fd = open(RTC_DEVICE, O_RDONLY);
+        if (rtc_fd == -1) {
+            perror("Failed to open RTC device");
+            exit(EXIT_FAILURE);
+        }
+
+        // Read data from RTC
+        if (ioctl(rtc_fd, RTC_RD_TIME, &rtc_tm) == -1) {
+            perror("Failed to read RTC time");
+            close(rtc_fd);
+            exit(EXIT_FAILURE);
+        }
+
+        close(rtc_fd);
+
+
+        // Read internal temperature and humidity
+        internal_temp_humidity(&internal_temperature, &internal_humidity);
+
+        //Read external temperature and humidity
         external_temp_humidity(&external_temperature, &external_humidity);
-        internal_temp_humidity(&interanl_temperature, &internal_humidity);
 
-        float x_accel = read_acceleration_x() - x_offset;
-        float y_accel = read_acceleration_y() - y_offset;
-        float z_accel = read_acceleration_z() - z_offset;
+        //Read acceleration
+    	read_acceleration(file, &xAccl, &yAccl, &zAccl);
+    		//Remove acceleration offsets
+               xAccl -= xOffset;
+               yAccl -= yOffset;
+               zAccl -= zOffset;
 
-        fprintf(file, "External Temperature: %.2f°C\n", external_temperature);
-        fprintf(file, "Internal Humidity: %.2f%%\n", external_humidity);
-        fprintf(file, "Temperature: %.2f°C\n", internal_temperature);
-        fprintf(file, "Humidity: %.2f%%\n", internal_humidity);
-        fprintf(file, "Acceleration in X-Axis: %.2f g\n", x_accel);
-        fprintf(file, "Acceleration in Y-Axis: %.2f g\n", y_accel);
-        fprintf(file, "Acceleration in Z-Axis: %.2f g\n", z_accel);
-       
- char sensor_value = read_value(SENSOR_PIN);
+        //Read wind speed
+    	read_wind_speed(&Vtemp, &wind_speed_mph, &TEMP);
 
-       if (sensor_value != '1')
-       {
-           int led_fd = open("/sys/class/gpio/gpio66/value", O_WRONLY);
-           if (led_fd != -1)
-           {
-               write(led_fd, "1", 1); // Turn on LED
-               close(led_fd);
-           }
-       }
 
-       usleep(1000); // Check every millisecond
-   
+        // Print sensor data to terminal
+        printf("%04d-%02d-%02d %02d:%02d:%02d\n",rtc_tm.tm_year + 1900, rtc_tm.tm_mon + 1, rtc_tm.tm_mday,rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec);
+        printf("Internal Temperature: %.2f C\n, Internal Humidity: %.2f%\n", internal_temperature, internal_humidity);
+        printf("External Temperature: %.2f C\n, Internal Humidity: %.2f%\n", external_temperature, external_humidity);
+        printf("Acceleration X: %.2f g, Y: %.2f g, Z: %.2f g\n", xAccl, yAccl, zAccl);
+        printf("Wind Speed: %.2f MPH\n",wind_speed_mph );
+
+
+        // Write sensor data to memory bank
+        FILE *file = fopen(FILENAME, "a");
+        if (file == NULL) {
+            perror("Failed to open file for writing data to SD Card.");
+            return 1;
+        }
+
+        fprintf(file, "%04d-%02d-%02d %02d:%02d:%02d",rtc_tm.tm_year + 1900, rtc_tm.tm_mon + 1, rtc_tm.tm_mday,rtc_tm.tm_hour, rtc_tm.tm_min, rtc_tm.tm_sec);
+        fprintf(file, "%.2fC %.2f%", internal_temperature, internal_humidity);
+        fprintf(file, "%.2fC %.2f%", external_temperature, external_humidity);
+        fprintf(file, "X:%.2fg, Y:%.2f g, Z:%.2f g", xAccl, yAccl, zAccl);
+        fprintf(file, "%.2fMPH\n",wind_speed_mph );
+        fclose(file);
+
+        // Delay for 1 second before next reading
+        sleep(1);
+
     }
-   
 
-    fclose(file);
     return 0;
 }
