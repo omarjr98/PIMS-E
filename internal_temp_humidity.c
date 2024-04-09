@@ -16,28 +16,42 @@
 // File path for uSD card
 #define FILENAME "/mnt/sdcard/temp_humid.bin"
 
-// Main function
-void internal_temp_humidity(float *internal_temperature, float *internal_humidity) {
-
-    int internal_temp_humidity_fd; // Local file descriptor
-
-    // Calls the I2C BUS to open
-    if ((internal_temp_humidity_fd = open(I2C_BUS, O_RDWR)) < 0) {
+// Function to open the I2C bus
+int open_i2c_bus() {
+    int i2c_fd;
+    if ((i2c_fd = open(I2C_BUS, O_RDWR)) < 0) {
         perror("Failed to open interface bus for internal temperature and humidity sensor");
         exit(1);
     }
+    return i2c_fd;
+}
+
+// Function to close the I2C bus
+void close_i2c_bus(int i2c_fd) {
+    if (close(i2c_fd) < 0) {
+        perror("Failed to close interface bus for internal temperature and humidity sensor");
+        exit(1);
+    }
+}
+
+// Main function
+void internal_temp_humidity(float *internal_temperature, float *internal_humidity) {
+    int internal_temp_humidity_fd; // Local file descriptor
+
+    // Open the I2C bus
+    internal_temp_humidity_fd = open_i2c_bus();
 
     // Set slave address
     if (ioctl(internal_temp_humidity_fd, I2C_SLAVE, SENSOR_ADDR) < 0) {
         perror("Failed to acquire bus access and/or talk to internal temperature and humidity sensor");
-        close(internal_temp_humidity_fd);
+        close_i2c_bus(internal_temp_humidity_fd);
         exit(1);
     }
 
     unsigned char command[] = {0x2C, 0x06}; // Temperature and humidity measurement commands
     if (write(internal_temp_humidity_fd, command, sizeof(command)) != sizeof(command)) {
         perror("Failed to write command to start internal temperature and humidity sensor measurement");
-        close(internal_temp_humidity_fd);
+        close_i2c_bus(internal_temp_humidity_fd);
         exit(1);
     }
 
@@ -46,7 +60,7 @@ void internal_temp_humidity(float *internal_temperature, float *internal_humidit
     unsigned char buffer[6];
     if (read(internal_temp_humidity_fd, buffer, sizeof(buffer)) != sizeof(buffer)) {
         perror("Failed to read internal temperature and humidity data");
-        close(internal_temp_humidity_fd);
+        close_i2c_bus(internal_temp_humidity_fd);
         exit(1);
     }
 
@@ -57,16 +71,12 @@ void internal_temp_humidity(float *internal_temperature, float *internal_humidit
     FILE *file = fopen(FILENAME, "a"); // Open file for appending
     if (file == NULL) {
         perror("Failed to open file for writing internal temperature and humidity data");
-        close(internal_temp_humidity_fd);
+        close_i2c_bus(internal_temp_humidity_fd);
         exit(1);
     }
 
-    // Print on terminal
-  //  fprintf(file ,"Internal Temperature: %.2f degC\n", temperature);
-   // fprintf(file, "Internal Humidity: %.2f %%\n", humidity);
-
-    // Write binary data to the file
-
     fclose(file);
-    close(internal_temp_humidity_fd);
+
+    // Close the I2C bus
+    close_i2c_bus(internal_temp_humidity_fd);
 }
