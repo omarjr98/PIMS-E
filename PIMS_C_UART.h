@@ -8,7 +8,7 @@
 #include <errno.h>
 #include <termios.h>
 
-#define UART_DEVICE "/dev/sr1"
+#define UART_DEVICE "/dev/ttyS1"
 
 // Remove at some point
 // To receive data, connect the P9_26 (UART1_RXD) pin on the BeagleBone Black
@@ -35,6 +35,7 @@ void UART_TX_WRAPPER(unsigned char inputByte){
 
     }
 
+
     // Configure UART settings
     struct termios options;
     tcgetattr(uart_fd, &options);
@@ -50,8 +51,8 @@ void UART_TX_WRAPPER(unsigned char inputByte){
     tcsetattr(uart_fd, TCSANOW, &options);
 
     // Transmit data
-    const char *data = "Hello, UART!\n";
-    ssize_t bytes_written = write(uart_fd, data, strlen(data));
+    const char *SensorReport = "Hello, UART!\n";
+    ssize_t bytes_written = write(uart_fd, SensorReport, strlen(SensorReport));
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
         close(uart_fd);
@@ -81,6 +82,7 @@ void txFloat(float input)
 }
 
 //Read in the bytes until the UART Message is complete
+
 //Construct an input to the shell from the UART Message bytes
 
 //Instruction byte will be first, followed by data bytes
@@ -118,5 +120,4 @@ void transmitSensorReport(SensorReport sensorReport){
 
 
 }
-
 
