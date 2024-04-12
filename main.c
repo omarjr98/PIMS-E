@@ -11,7 +11,7 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include "PIMS_C_UART.h"
-#define RTC_DEVICE "/dev/rtc1"
+#define RTC_DEVICE "/dev/rtc0"
 #define UART_DEVICE "/dev/ttyS1"
 
 
@@ -25,7 +25,7 @@ int main() {
     struct rtc_time rtc_tm;
    char dateTime[DATETIME_LENGTH];
 
-     Accelerometer calibration
+  //ccelerometer calibration
     initialize_accelerometer(&file);
 
     float xOffset, yOffset, zOffset;
@@ -41,14 +41,14 @@ int main() {
 
     while (1) {
 
-         Open RTC
+       //Open RTC
         rtc_fd = open(RTC_DEVICE, O_RDONLY);
         if (rtc_fd == -1) {
             perror("Failed to open RTC device");
             exit(EXIT_FAILURE);
         }
 
-         Read data from RTC
+    //   Read data from RTC
         if (ioctl(rtc_fd, RTC_RD_TIME, &rtc_tm) == -1) {
             perror("Failed to read RTC time");
             close(rtc_fd);
@@ -103,7 +103,7 @@ int main() {
 
         //PIMS-C UART
         SensorReport ttyS1 = {dateTime[20],  xOffset, yOffset, zOffset, xAccl, yAccl, zAccl,external_temperature, external_humidity,internal_temperature, internal_humidity,wind_speed_mph};
-        SensorReport ttyS1 = { xOffset, yOffset, zOffset, xAccl, yAccl, zAccl,external_temperature, external_humidity,internal_temperature, internal_humidity,wind_speed_mph};
+      //SensorReport ttyS1 = { xOffset, yOffset, zOffset, xAccl, yAccl, zAccl,external_temperature, external_humidity,internal_temperature, internal_humidity,wind_speed_mph};
 
         transmitSensorReport(ttyS1);
 
