@@ -52,7 +52,7 @@ void UART_TX_WRAPPER(unsigned char inputByte){
 
     // Transmit data
     //const char *SensorReport = "Hello UART\n";
-    ssize_t bytes_written = write(uart_fd, inputByte, 1);
+    ssize_t bytes_written = write(uart_fd, &inputByte, 1);
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
         close(uart_fd);
@@ -118,9 +118,19 @@ void transmitSensorReport(SensorReport sensorReport){
     //txFloat(sensorReport.float ultrasound);
 
 
-
-}
-
+       printf("UART DATE: %s\n",sensorReport.dateTime);
+       printf("sensor .%.2f\n", sensorReport.xOffset);
+       printf("sensor .%.2f\n", sensorReport.yOffset);
+       printf("sensor .%.2f\n", sensorReport.zOffset);
+       printf("sensor .%.2f\n", sensorReport.xAccl);
+       printf("sensor .%.2f\n", sensorReport.yAccl);
+       printf("sensor .%.2f\n", sensorReport.zAccl);
+       printf("sensor .%.2f\n", sensorReport.external_temperature);
+       printf("sensor .%.2f\n", sensorReport.external_humidity);
+       printf("sensor .%.2f\n", sensorReport.internal_temperature);
+       printf("sensor .%.2f\n", sensorReport.internal_humidity);
+       printf("sensor .%.2f\n", sensorReport.wind_speed_mph);
+       
 
 
 }
