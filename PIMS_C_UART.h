@@ -39,7 +39,7 @@ void UART_TX_WRAPPER(unsigned char inputByte){
     // Configure UART settings
     struct termios options;
     tcgetattr(uart_fd, &options);
-    cfsetospeed(&options, B9600);  // Set baud rate
+    cfsetospeed(&options, B115200);  // Set baud rate
     options.c_cflag &= ~PARENB;    // Disable parity bit
     options.c_cflag &= ~CSTOPB;    // Set one stop bit`
     options.c_cflag &= ~CSIZE;     // Clear character size mask
