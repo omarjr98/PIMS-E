@@ -51,8 +51,8 @@ void UART_TX_WRAPPER(unsigned char inputByte){
     tcsetattr(uart_fd, TCSANOW, &options);
 
     // Transmit data
-    const char *SensorReport = "Hello, UART!\n";
-    ssize_t bytes_written = write(uart_fd, SensorReport, strlen(SensorReport));
+    //const char *SensorReport = "Hello UART\n";
+    ssize_t bytes_written = write(uart_fd, inputByte, 1);
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
         close(uart_fd);
@@ -116,6 +116,10 @@ void transmitSensorReport(SensorReport sensorReport){
     txFloat(sensorReport.internal_humidity);
     txFloat(sensorReport.wind_speed_mph);
     //txFloat(sensorReport.float ultrasound);
+
+
+
+}
 
 
 
