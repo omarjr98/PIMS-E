@@ -3,7 +3,7 @@
 
 typedef struct SensorReport{
 
-    char dateTime[DATETIME_LENGTH];
+    char dateTime[20];
     float xOffset, yOffset, zOffset;
     float xAccl, yAccl, zAccl;
     float external_temperature, external_humidity;
@@ -15,4 +15,3 @@ typedef struct SensorReport{
 
 #define SENSOR_REPORT_SIZE (unsigned char)sizeof(SensorReport)
 
-#endif 
