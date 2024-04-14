@@ -7,14 +7,16 @@
 #include <string.h>
 #include <errno.h>
 #include <termios.h>
+#include "internal_temp_humidity.h"
+#include "external_temp_humidity.h"
+#include "accelerometer.h"
+#include "calibration.h"
+#include "wind_sensor.h"
+#include "time.h"
+#include <linux/rtc.h>
+#include <sys/ioctl.h>
 
 #define UART_DEVICE "/dev/ttyS1"
-
-// Remove at some point
-// To receive data, connect the P9_26 (UART1_RXD) pin on the BeagleBone Black
-// To transmit data, connect the P9_24 (UART1_TXD) pin on the BeagleBone Black
-
-
 
 //Read in the bytes until the UART Message is complete
 //Construct an input to the shell from the UART Message bytes
@@ -25,49 +27,37 @@
 //on the PIMS E side. Then the method can be called to transmit the
 //Sensor report in a pre-determeined way:
 void UART_TX_WRAPPER(unsigned char inputByte){
-    //Place Platform Specific UART T_X Function for platform here:
+//Place Platform Specific UART T_X Function for platform here:
 
-    //Open UART
+    // Open UART
     int uart_fd;
+    struct termios uart_options;
     uart_fd = open(UART_DEVICE, O_WRONLY | O_NOCTTY);
     if (uart_fd == -1) {
         perror("Failed to open UART device");
-
+        return;
     }
 
+    // Get current UART settings
+        tcgetattr(uart_fd, &uart_options);
 
-    // Configure UART settings
-    struct termios options;
-    tcgetattr(uart_fd, &options);
-    cfsetospeed(&options, B115200);  // Set baud rate
-    options.c_cflag &= ~PARENB;    // Disable parity bit
-    options.c_cflag &= ~CSTOPB;    // Set one stop bit`
-    options.c_cflag &= ~CSIZE;     // Clear character size mask
-    options.c_cflag |= CS8;        // Set 8 bits per character
-    options.c_cflag &= ~CRTSCTS;   // Disable hardware flow control
-    options.c_cflag |= CREAD | CLOCAL; // Enable receiver, ignore modem status lines
-    options.c_iflag &= ~(IXON | IXOFF | IXANY); // Disable software flow control
-    options.c_lflag &= ~(ICANON | ECHO | ECHOE | ISIG); // Set raw mode
-    tcsetattr(uart_fd, TCSANOW, &options);
+        // Set baud rate
+        cfsetospeed(&uart_options, B115200); // TX desired baud rate
+        cfsetispeed(&uart_options, B115200); // RX desired baud rate
+
+        // Apply UART settings
+        tcsetattr(uart_fd, TCSANOW, &uart_options);
+
 
     // Transmit data
-    //const char *SensorReport = "Hello UART\n";
     ssize_t bytes_written = write(uart_fd, &inputByte, 1);
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
-        close(uart_fd);
-
     }
 
     // Close UART device
     close(uart_fd);
-
-
-    }
-
-
-
-
+}
 
 void txFloat(float input)
 {
@@ -76,13 +66,12 @@ void txFloat(float input)
     unsigned char *p = (unsigned char*)&input;
 
     //Loop through array and transmit each byte
-    for (int i = 0; i < 4; i++){
+    for (int i = 0; i < 4; i++) {
         UART_TX_WRAPPER((unsigned char)p[i]);
     }
 }
 
 //Read in the bytes until the UART Message is complete
-
 //Construct an input to the shell from the UART Message bytes
 
 //Instruction byte will be first, followed by data bytes
@@ -90,20 +79,23 @@ void txFloat(float input)
 //To send a Sensor report, the sensor report struct has to be created
 //on the PIMS E side. Then the method can be called to transmit the
 //Sensor report in a pre-determeined way:
-void transmitSensorReport(SensorReport sensorReport){
+void transmitSensorReport(SensorReport sensorReport) {
+	printf("Transmitting UART report...\n");
+    // Transmit the Report Transfer Byte
+	UART_TX_WRAPPER(SINGLE_REPORT_TRANSFER);
 
-    //Transmit the Report Transfer Byte
-    UART_TX_WRAPPER(SINGLE_REPORT_TRANSFER);
-
-    //Transmit the dateTime
+    // Transmit the dateTime
+	printf("Transmitting report dateTime: \n");
     unsigned char tempByte;
-    for (int i = 0; i < 20; i++){
+    for (int i = 0; i < 20; i++) {
         tempByte = sensorReport.dateTime[i];
+        printf("%x ", tempByte); // Print each byte before transmission
         UART_TX_WRAPPER(tempByte);
     }
+    printf("\n");
 
-    //Transmit the floats from the report, from lsb to msb
-
+    // Transmit the floats from the report, from lsb to msb
+    printf("Transmitting report floats...\n");
     txFloat(sensorReport.xOffset);
     txFloat(sensorReport.yOffset);
     txFloat(sensorReport.zOffset);
@@ -115,23 +107,22 @@ void transmitSensorReport(SensorReport sensorReport){
     txFloat(sensorReport.internal_temperature);
     txFloat(sensorReport.internal_humidity);
     txFloat(sensorReport.wind_speed_mph);
-    //txFloat(sensorReport.float ultrasound);
+    // txFloat(sensorReport.ultrasound);
 
 
-       printf("UART DATE: %s\n",sensorReport.dateTime);
-       printf("sensor .%.2f\n", sensorReport.xOffset);
-       printf("sensor .%.2f\n", sensorReport.yOffset);
-       printf("sensor .%.2f\n", sensorReport.zOffset);
-       printf("sensor .%.2f\n", sensorReport.xAccl);
-       printf("sensor .%.2f\n", sensorReport.yAccl);
-       printf("sensor .%.2f\n", sensorReport.zAccl);
-       printf("sensor .%.2f\n", sensorReport.external_temperature);
-       printf("sensor .%.2f\n", sensorReport.external_humidity);
-       printf("sensor .%.2f\n", sensorReport.internal_temperature);
-       printf("sensor .%.2f\n", sensorReport.internal_humidity);
-       printf("sensor .%.2f\n", sensorReport.wind_speed_mph);
-       
-
-
+    // For debugging
+    printf("UART report transmission complete.\n");
+    printf("Report DATE: %s\n",sensorReport.dateTime);
+    printf("Report x offset: %.2f\n", sensorReport.xOffset);
+    printf("Report y offset: %.2f\n", sensorReport.yOffset);
+    printf("Report z offset: %.2f\n", sensorReport.zOffset);
+    printf("Report x acceleration: %.2f\n", sensorReport.xAccl);
+    printf("Report y acceleration: %.2f\n", sensorReport.yAccl);
+    printf("Report z acceleration: %.2f\n", sensorReport.zAccl);
+    printf("Report temperature: %.2f\n", sensorReport.external_temperature);
+    printf("Report humidity: %.2f\n", sensorReport.external_humidity);
+    printf("Report temperature: %.2f\n", sensorReport.internal_temperature);
+    printf("Report humidity: %.2f\n", sensorReport.internal_humidity);
+    printf("Report wind speed: %.2f\n", sensorReport.wind_speed_mph);
 }
 
