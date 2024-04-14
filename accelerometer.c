@@ -70,3 +70,4 @@ void read_acceleration(float file, float *xAccl, float *yAccl, float *zAccl) {
         *zAccl -= 1024;
     }
 }
+
