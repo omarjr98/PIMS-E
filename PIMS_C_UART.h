@@ -7,14 +7,6 @@
 #include <string.h>
 #include <errno.h>
 #include <termios.h>
-#include "internal_temp_humidity.h"
-#include "external_temp_humidity.h"
-#include "accelerometer.h"
-#include "calibration.h"
-#include "wind_sensor.h"
-#include "time.h"
-#include <linux/rtc.h>
-#include <sys/ioctl.h>
 
 #define UART_DEVICE "/dev/ttyS1"
 
@@ -54,6 +46,7 @@ void UART_TX_WRAPPER(unsigned char inputByte){
     if (bytes_written == -1) {
         perror("Failed to write to UART device");
     }
+    	printf("%x ",inputByte);
 
     // Close UART device
     close(uart_fd);
@@ -79,50 +72,75 @@ void txFloat(float input)
 //To send a Sensor report, the sensor report struct has to be created
 //on the PIMS E side. Then the method can be called to transmit the
 //Sensor report in a pre-determeined way:
-void transmitSensorReport(SensorReport sensorReport) {
-	printf("Transmitting UART report...\n");
-    // Transmit the Report Transfer Byte
-	UART_TX_WRAPPER(SINGLE_REPORT_TRANSFER);
-
-    // Transmit the dateTime
-	printf("Transmitting report dateTime: \n");
+void transmitSensorReport(SensorReport sensorReport){
+    //Transmit the Report Transfer Byte
+    int counter = 0;
+    UART_TX_WRAPPER(SINGLE_REPORT_TRANSFER);
+    counter ++;
+    //Transmit the dateTime
     unsigned char tempByte;
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 32; i++){
         tempByte = sensorReport.dateTime[i];
-        printf("%x ", tempByte); // Print each byte before transmission
         UART_TX_WRAPPER(tempByte);
+        counter ++;
     }
-    printf("\n");
 
-    // Transmit the floats from the report, from lsb to msb
-    printf("Transmitting report floats...\n");
-    txFloat(sensorReport.xOffset);
-    txFloat(sensorReport.yOffset);
-    txFloat(sensorReport.zOffset);
-    txFloat(sensorReport.xAccl);
-    txFloat(sensorReport.yAccl);
-    txFloat(sensorReport.zAccl);
-    txFloat(sensorReport.external_temperature);
-    txFloat(sensorReport.external_humidity);
-    txFloat(sensorReport.internal_temperature);
-    txFloat(sensorReport.internal_humidity);
-    txFloat(sensorReport.wind_speed_mph);
-    // txFloat(sensorReport.ultrasound);
+
+    //Transmit the floats from the report, from lsb to msb
+
+    txFloat(sensorReport.temperatureExternal);
+    counter +=4;
+    txFloat(sensorReport.humidityExternal);
+    counter +=4;
+    txFloat(sensorReport.temperatureInternal);
+    counter +=4;
+    txFloat(sensorReport.humidityInternal);
+    counter +=4;
+    txFloat(sensorReport.accelXMin);
+    counter +=4;
+    txFloat(sensorReport.accelXMax);
+    counter +=4;
+    txFloat(sensorReport.accelYMin);
+    counter +=4;
+    txFloat(sensorReport.accelYMax);
+    counter +=4;
+    txFloat(sensorReport.accelZMin);
+    counter +=4;
+    txFloat(sensorReport.accelZMax);
+    counter +=4;
+    txFloat(sensorReport.accelXOffset);
+    counter +=4;
+    txFloat(sensorReport.accelYOffset);
+    counter +=4;
+    txFloat(sensorReport.accelZOffset);
+    counter +=4;
+    txFloat(sensorReport.windSpeed);
+    counter +=4;
+    txFloat(sensorReport.ultrasound);
+    counter +=4;
+
+    UART_TX_WRAPPER(0xDD);
+    UART_TX_WRAPPER(0xDD);
 
 
     // For debugging
-    printf("UART report transmission complete.\n");
-    printf("Report DATE: %s\n",sensorReport.dateTime);
-    printf("Report x offset: %.2f\n", sensorReport.xOffset);
-    printf("Report y offset: %.2f\n", sensorReport.yOffset);
-    printf("Report z offset: %.2f\n", sensorReport.zOffset);
-    printf("Report x acceleration: %.2f\n", sensorReport.xAccl);
-    printf("Report y acceleration: %.2f\n", sensorReport.yAccl);
-    printf("Report z acceleration: %.2f\n", sensorReport.zAccl);
-    printf("Report temperature: %.2f\n", sensorReport.external_temperature);
-    printf("Report humidity: %.2f\n", sensorReport.external_humidity);
-    printf("Report temperature: %.2f\n", sensorReport.internal_temperature);
-    printf("Report humidity: %.2f\n", sensorReport.internal_humidity);
-    printf("Report wind speed: %.2f\n", sensorReport.wind_speed_mph);
+    printf("\n");
+    printf("-------------- UART Report Transmitted --------------\n");
+    printf( " Date: %s\n",sensorReport.dateTime);
+    printf( " External Temperature: %.2f\n", sensorReport.temperatureExternal);
+    printf( " External Humidity: %.2f\n", sensorReport.humidityExternal);
+    printf( " Internal Temperature: %.2f\n", sensorReport.temperatureInternal);
+    printf( " Internal Humidity: %.2f\n", sensorReport.humidityInternal);
+    printf( " X_Min: %.2f\n", sensorReport.accelXMin);
+    printf( " X_Max: %.2f\n", sensorReport.accelXMax);
+    printf( " Y_Min: %.2f\n", sensorReport.accelYMin);
+    printf( " Y_Max: %.2f\n", sensorReport.accelYMax);
+    printf( " Z_Min: %.2f\n", sensorReport.accelZMin);
+    printf( " Z_Max: %.2f\n", sensorReport.accelZMax);
+    printf( " X_Offset: %.2f\n", sensorReport.accelXOffset);
+    printf( " Y_Offset: %.2f\n", sensorReport.accelYOffset);
+    printf( " Z_Offset: %.2f\n", sensorReport.accelZOffset);
+    printf( " Wind speed: %.2f\n", sensorReport.windSpeed);
+    printf( " Ultrasound: %.2f\n", sensorReport.ultrasound);
+    printf("----------------- UART Report END --------------------\n");
 }
-
