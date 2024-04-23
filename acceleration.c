@@ -1,73 +1,139 @@
-#include "accelerometer.h"
 #include <stdio.h>
 #include <stdlib.h>
-#include <linux/i2c-dev.h>
-#include <sys/ioctl.h>
-#include <fcntl.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <sys/ioctl.h>
+#include <linux/i2c-dev.h>
+#include "accelerometer.h"
 
-void initialize_accelerometer(int *file) {
-    // Create I2C bus
-    char *bus = "/dev/i2c-2";
-    if ((*file = open(bus, O_RDWR)) < 0) {
-        printf("Failed to open the bus.\n");
-        exit(1);
+void read_accelerometer_offsets(int16_t *x_offset, int16_t *y_offset, int16_t *z_offset) {
+    int fd;
+    char buf[2];
+
+    // Open the I2C device
+    char i2c_dev[20];
+    sprintf(i2c_dev, "/dev/i2c-%d", I2C_BUS);
+    fd = open(i2c_dev, O_RDWR);
+    if (fd < 0) {
+        perror("Failed to open I2C device");
+        return;
     }
 
-    // Get I2C device, ADXL345 I2C address is 0x53(83)
-    if (ioctl(*file, I2C_SLAVE, 0x53) < 0) {
-        printf("Failed to acquire bus access and/or talk to slave.\n");
-        exit(1);
+    // Set the I2C slave address
+    if (ioctl(fd, I2C_SLAVE, ADLX345_ADDR) < 0) {
+        perror("Failed to set I2C slave address");
+        close(fd);
+        return;
     }
 
-    // Select Bandwidth rate register(0x2C)
-    // Normal mode, Output data rate = 100 Hz(0x0A)
-    char config[2] = {0x2C, 0x0A};
-    write(*file, config, 2);
+    // Read the offset registers (0x1E, 0x1F, 0x20)
+    buf[0] = 0x1E;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
+    }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *x_offset = (buf[1] << 8) | buf[0];
 
-    // Select Power control register(0x2D)
-    // Auto-sleep disable(0x08)
-    config[0] = 0x2D;
-    config[1] = 0x08;
-    write(*file, config, 2);
+    buf[0] = 0x1F;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
+    }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *y_offset = (buf[1] << 8) | buf[0];
 
-    // Select Data format register(0x31)
-    // Self test disabled, 4-wire interface, Full resolution, range = +/-2g(0x08)
-    config[0] = 0x31;
-    config[1] = 0x08;
-    write(*file, config, 2);
-    sleep(1);
+    buf[0] = 0x20;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
+    }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *z_offset = (buf[1] << 8) | buf[0];
+
+    printf("Offset values: X=%d, Y=%d, Z=%d\n", *x_offset, *y_offset, *z_offset);
+    close(fd);
 }
 
-void read_acceleration(float file, float *xAccl, float *yAccl, float *zAccl) {
-    // Read 6 bytes of data from register(0x32)
-    // xAccl lsb, xAccl msb, yAccl lsb, yAccl msb, zAccl lsb, zAccl msb
-    char reg = 0x32;
-    if (write(file, &reg, 1) != 1) {
-        printf("Error writing to register.\n");
-        exit(1);
+void read_accelerometer_data(int16_t x_offset, int16_t y_offset, int16_t z_offset, int16_t *x, int16_t *y, int16_t *z) {
+    int fd;
+    char buf[2];
+
+    // Open the I2C device
+    char i2c_dev[20];
+    sprintf(i2c_dev, "/dev/i2c-%d", I2C_BUS);
+    fd = open(i2c_dev, O_RDWR);
+    if (fd < 0) {
+        perror("Failed to open I2C device");
+        return;
     }
 
-    char data[6] = {0};
-    if (read(file, data, 6) != 6) {
-        printf("Error reading from register.\n");
-        exit(1);
+    // Set the I2C slave address
+    if (ioctl(fd, I2C_SLAVE, ADLX345_ADDR) < 0) {
+        perror("Failed to set I2C slave address");
+        close(fd);
+        return;
     }
 
-    // Convert the data to 10-bits
-    *xAccl = ((data[1] & 0x03) * 256 + (data[0] & 0xFF));
-    if (*xAccl > 511) {
-        *xAccl -= 1024;
+    // Read the DATAX0 and DATAX1 registers (0x32 and 0x33)
+    buf[0] = 0x32;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
     }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *x = (buf[1] << 8) | buf[0];
+    *x = *x - x_offset;
 
-    *yAccl = ((data[3] & 0x03) * 256 + (data[2] & 0xFF));
-    if (*yAccl > 511) {
-        *yAccl -= 1024;
+    // Read the DATAY0 and DATAY1 registers (0x34 and 0x35)
+    buf[0] = 0x34;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
     }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *y = (buf[1] << 8) | buf[0];
+    *y = *y - y_offset;
 
-    *zAccl = ((data[5] & 0x03) * 256 + (data[4] & 0xFF));
-    if (*zAccl > 511) {
-        *zAccl -= 1024;
+    // Read the DATAZ0 and DATAZ1 registers (0x36 and 0x37)
+    buf[0] = 0x36;
+    if (write(fd, buf, 1) != 1) {
+        perror("Failed to write to I2C device");
+        close(fd);
+        return;
     }
+    if (read(fd, buf, 2) != 2) {
+        perror("Failed to read from I2C device");
+        close(fd);
+        return;
+    }
+    *z = (buf[1] << 8) | buf[0];
+    *z = *z - z_offset;
+
+    close(fd);
 }
-
